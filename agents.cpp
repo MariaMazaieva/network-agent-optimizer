@@ -2,6 +2,11 @@
 #include <vector>
 #include <bits/stdc++.h>
 
+/*
+    Indexes in vector<Node> nodes (N + 1); starts from 1, not 0 
+
+*/
+
 using namespace std;
 struct Node{
     int value;
@@ -14,25 +19,30 @@ struct Node{
 
 bool read_input_args(int &N, int &M, int &A, int &B);
 bool in_range(int N, int M, int A, int B);
-int read_matrix(int M, vector<Node> &nodes);
+int read_matrix(int M, vector<vector<int>> &adj, vector<Node> &nodes);
 
 int main() {
     int N, M, A, B;
     bool is_ok = true;
     if (!read_input_args(N, M, A, B)) return 1;
+    
+    vector<vector<int>> adj(N + 1);
     vector<Node> nodes(N + 1);
+    read_matrix(M, adj, nodes);
 
-    read_matrix(M, nodes);
+    cout << adj[1].size() << ' ' << adj[3].size() << '\n';
     return 0;
 }
 
 
-int read_matrix(int M, vector<Node> &nodes){
+int read_matrix(int M, vector<vector<int>> &adj, vector<Node> &nodes){
     int u, v;
     for (int i = 0; i < M; ++i) {
         cin >> u >> v;
         nodes[u].degree++;
         nodes[v].degree++;
+        adj[u].push_back(v);
+        adj[v].push_back(u);
         // cout << u << v << '\n';
     }
     return 0;
