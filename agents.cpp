@@ -4,7 +4,7 @@
 
 /*
     N - vertices, M - n edges, A - T1(extravert), B - T2(introvert) 
-    Indexes in vector<Node> nodes (N + 1); starts from 1, not 0 
+    Indexes in vector<Node> nodes (N); starts from  0 
 
 */
 
@@ -33,7 +33,7 @@ int calculate_score( vector<Node> &nodes);
 int count_max_node_score(int i, vector<Node> nodes, int restA, int restB);
 void print_nodes(const vector<Node> &nodes);
 void print_adj_list();
-int remaining_max (vector<Node> &nodes, int restA, int restB);
+int remaining_max (int i_cur_node, vector<Node> &nodes, int restA, int restB);
 
 
 vector<vector<int>> adj;
@@ -84,8 +84,8 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
     
     
    
-    int rest = remaining_max(nodes, A, B);
-    if (rest < global_best_score)
+    int rest = remaining_max(i, nodes, A, B);
+    if (rest <= global_best_score)
         return 0;
 
     if(A > 0 ){
@@ -121,7 +121,7 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
 }
 
 
-int remaining_max (vector<Node>& nodes, int restA, int restB){
+int remaining_max (int i_cur_node, vector<Node>& nodes, int restA, int restB){
     int r_max = 0;
     int sum_agents = restA + restB;
     int temp_score = 0;
@@ -134,12 +134,35 @@ int remaining_max (vector<Node>& nodes, int restA, int restB){
         }
     }
 
-    for( int v = 0; v < N; v ++){
-        if(nodes[v].agent_type == 0 && sum_agents > 0){
-            r_max += adj[v].size();
-            sum_agents--;
+    // for( int v = 0; v < N; v ++){
+    //     if(nodes[v].agent_type == 0 && sum_agents > 0){
+    //         r_max += adj[v].size();
+    //         sum_agents--;
+    //     }
+    // }    
+    int potential_extravert = 0, potential_introvert = 0;
+    for ( int v = i_cur_node; v < N; v ++){
+        if (nodes[v].agent_type == 0 && sum_agents > 0){
+            
+            if(restA > 0){
+                nodes[v].agent_type = 1;
+                potential_extravert= count_max_node_score(v, nodes, restA, restB);
+            }
+            if(restB > 0){
+                nodes[v].agent_type = 2;
+                potential_introvert= count_max_node_score(v, nodes, restA, restB);
+            }
+
+            if (potential_extravert >= potential_introvert){
+                r_max += potential_extravert;
+                restA--;
+            }else{     
+                r_max += potential_introvert;
+                restB--;
+            }
+            nodes[v].agent_type = 0;
         }
-    }    
+    }
 
 
     return r_max;
@@ -156,7 +179,8 @@ int calculate_score( vector<Node> &nodes){
             if (nodes[u].agent_type == 1 && 
                     (nodes[v].agent_type == 1  || nodes[v].agent_type == 2)) 
                 score++;
-            else if (nodes[u].agent_type == 2 && 
+            
+                else if (nodes[u].agent_type == 2 && 
                 (nodes[v].agent_type == 0  || nodes[v].agent_type == 3))
                 score++;
         }
@@ -179,9 +203,11 @@ int count_max_node_score(int i, vector<Node> nodes, int restA, int restB){
                 score += 1;
         }
         else if (nodes[i].agent_type == 2) { 
+            
             if (nodes[v].agent_type == 0 && remain > restA + restB) 
                 score += 1, remain --;
-            else if (nodes[v].agent_type == 3)
+            
+                else if (nodes[v].agent_type == 3)
                 score++;
         }
     }
@@ -197,14 +223,12 @@ int read_matrix( vector<Node> &nodes){
         
         adj[u-1].push_back(v-1);
         adj[v-1].push_back(u-1);
-        // cout << u << v << '\n';
         }
     return 0;
 }
 
 bool read_input_args(){
     cin >> N >> M >> A >> B;
-    // cout << "Read: " << N << " " << M << " " << A << " " << B << endl;
     return in_range();
 }
 
@@ -218,20 +242,6 @@ bool in_range(){
     // cout << "reading" << N << M << A << B << endl;
     return false;
 }
-
-
-/*
-For each node u:
-    If node[u] has T1:
-        for each v in adj[u]:
-            if node[v] occupied → add +1 to score
-    If node[u] has T2:
-        for each v in adj[u]:
-            if node[v] empty → add +1 to score
-
-
-
-*/
 
 
 void print_nodes(const vector<Node> &nodes) {
