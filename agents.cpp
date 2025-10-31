@@ -29,7 +29,7 @@ int read_matrix( vector<Node> &nodes);
 int find_best_solution(int i,  vector<Node> &nodes, int A, int B);
 int graph_search ( vector<Node> &nodes);
 int calculate_score( vector<Node> &nodes);
-int count_neighb_score(int i, vector<Node> &nodes);
+int count_max_node_score(int i, vector<Node> nodes, int restA, int restB);
 void print_nodes(const vector<Node> &nodes);
 void print_adj_list();
 int remaining_max (vector<Node> nodes, int restA, int restB);
@@ -80,24 +80,22 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
 
 
    if(i > V || (A == 0 && B == 0)){
-
         int score = calculate_score( nodes);
-
         print_nodes(nodes);
         global_best_score = max(global_best_score, score);
-
         return 0;
     } 
-    int count_neighbours =0;
+    
+    
+   
+    int rest = remaining_max(nodes, A, B);
+    if (rest < global_best_score)
+        return 0;
 
     if(A > 0 ){
         nodes[i].agent_type = 1; 
         nodes[i].occupied=true; 
         // int score = count_neighb_score(i, adj, nodes);
-        
-        int rest = remaining_max(nodes, A - 1,B);
-        if (rest < global_best_score)
-            return 0;
         
         find_best_solution(i + 1, nodes, A - 1, B); 
         nodes[i].agent_type = 0;
@@ -110,10 +108,7 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
         // int temp_score = ca
         // int score = count_neighb_score(i, adj, nodes);
         int score = calculate_score( nodes);
-   
-        int rest = remaining_max(nodes, A, B - 1);
-        if (rest < global_best_score)
-            return 0;
+
         find_best_solution(i + 1, nodes, A, B-1);  
         nodes[i].agent_type = 0;
         nodes[i].occupied=false; 
@@ -132,22 +127,24 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
 
 int remaining_max (vector<Node> nodes, int restA, int restB){
     int r_max = 0;
-    int score = calculate_score(nodes);
+    int sum_agents = restA + restB;
     int temp_score = 0;
-    r_max = score;
-    if (restA <= 0 && restB <= 0) return score;
+  
     
     for( int i = 1; i <= N; i ++){
         if(nodes[i].agent_type == 1 || nodes[i].agent_type == 2){
-            temp_score = (i, nodes);
+            temp_score = count_max_node_score(i, nodes, restA, restB);
+            r_max += temp_score;
         }
-
     }
 
-    int new_score = calculate_score(nodes);
+    for( int v = 1; v <= N; v ++){
+        if(nodes[v].agent_type == 0 && sum_agents > 0){
+            r_max+= nodes[v].degree;
+            sum_agents--;
+        }
+    }    
 
-    if (new_score > score)
-        r_max = new_score;
 
     return r_max;
 }
@@ -167,7 +164,7 @@ int calculate_score( vector<Node> &nodes){
     return score;
 }
 
-int count_neighb_score(int i, vector<Node> nodes, int restA, int restB){
+int count_max_node_score(int i, vector<Node> nodes, int restA, int restB){
     int score = 0;
     int sum_agents = restA + restB;
     int remain = N - (A - restA) - (B - restB);//reamining free vertices
