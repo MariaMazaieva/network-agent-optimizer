@@ -29,28 +29,29 @@ int read_matrix( vector<Node> &nodes);
 int find_best_solution(int i,  vector<Node> &nodes, int A, int B);
 int graph_search ( vector<Node> &nodes);
 int calculate_score( vector<Node> &nodes);
+
 int count_max_node_score(int i, vector<Node> nodes, int restA, int restB);
 void print_nodes(const vector<Node> &nodes);
 void print_adj_list();
-int remaining_max (vector<Node> nodes, int restA, int restB);
-vector<Node> agent(N+1);
+int remaining_max (vector<Node> &nodes, int restA, int restB);
+
 
 vector<vector<int>> adj;
 
 int main() {
     if (!read_input_args()) return 1;
-    adj.resize(N + 1);
-    vector<Node> nodes(N + 1);
+    adj.resize(N);
+    vector<Node> nodes(N);
     read_matrix(nodes);
   
     //do i really need this 
-    for (int i = 1; i <= N; ++i){
+    for (int i = 0; i < N; ++i){
         nodes[i].id = i;
         nodes[i].occupied = false;
         nodes[i].agent_type = 0;
     }
-    sort (nodes.begin() + 1, nodes.end(), [](const Node &a, const Node &b)
-        {return a.degree > b.degree;});
+    // sort (nodes.begin(), nodes.end(), [](const Node &a, const Node &b)
+    //     {return a.degree > b.degree;});
     
     int best_score = graph_search(nodes);
     
@@ -63,25 +64,20 @@ int main() {
 int graph_search (vector<Node> &nodes){
     int best_score=0;
     
-    int V = adj.size() - 1;
-    vector<int> suffix_degree(V + 2, 0);  
-    for (int j = V; j >= 1; --j) {
-       suffix_degree[j] = suffix_degree[j + 1] + nodes[j].degree;
-    } 
+   
     cout << B << endl ;
     print_adj_list();
-    best_score = find_best_solution(1, nodes, A, B);
+    best_score = find_best_solution(0, nodes, A, B);
     
     return best_score;
 }
 
 int find_best_solution(int i, vector<Node> &nodes, int A, int B){
-    int V = nodes.size()-1; //amount of vertices 
+    // int V = nodes.size()-1; //amount of vertices 
 
-
-   if(i > V || (A == 0 && B == 0)){
+   if(i >= N || (A == 0 && B == 0)){
         int score = calculate_score( nodes);
-        print_nodes(nodes);
+        // print_nodes(nodes);
         global_best_score = max(global_best_score, score);
         return 0;
     } 
@@ -114,7 +110,7 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
         nodes[i].occupied=false; 
     }
 
-    if( V - i >= A + B ){
+    if( N - i  > A + B ){
         nodes[i].agent_type = 3; // 3 - CHECKED
         find_best_solution(i + 1, nodes, A, B);
         nodes[i].agent_type = 0;
@@ -125,22 +121,22 @@ int find_best_solution(int i, vector<Node> &nodes, int A, int B){
 }
 
 
-int remaining_max (vector<Node> nodes, int restA, int restB){
+int remaining_max (vector<Node>& nodes, int restA, int restB){
     int r_max = 0;
     int sum_agents = restA + restB;
     int temp_score = 0;
   
     
-    for( int i = 1; i <= N; i ++){
+    for( int i = 0; i < N; i ++){
         if(nodes[i].agent_type == 1 || nodes[i].agent_type == 2){
             temp_score = count_max_node_score(i, nodes, restA, restB);
             r_max += temp_score;
         }
     }
 
-    for( int v = 1; v <= N; v ++){
+    for( int v = 0; v < N; v ++){
         if(nodes[v].agent_type == 0 && sum_agents > 0){
-            r_max+= nodes[v].degree;
+            r_max += adj[v].size();
             sum_agents--;
         }
     }    
@@ -152,13 +148,17 @@ int remaining_max (vector<Node> nodes, int restA, int restB){
 
 int calculate_score( vector<Node> &nodes){
     int score=0;
-    for(int u=1; u <= N; u++){
-        if(!nodes[u].occupied) continue;
+    for(int u=0; u < N; u++){
+        if(nodes[u].agent_type == 3 || nodes[u].agent_type == 0) continue;
 
         for(int v : adj[u]){
             // Each agent scores based on their own perspective
-            if (nodes[u].agent_type == 1 && nodes[v].occupied) score++;
-            if (nodes[u].agent_type == 2 && !nodes[v].occupied) score++;
+            if (nodes[u].agent_type == 1 && 
+                    (nodes[v].agent_type == 1  || nodes[v].agent_type == 2)) 
+                score++;
+            else if (nodes[u].agent_type == 2 && 
+                (nodes[v].agent_type == 0  || nodes[v].agent_type == 3))
+                score++;
         }
     }
     return score;
@@ -170,13 +170,19 @@ int count_max_node_score(int i, vector<Node> nodes, int restA, int restB){
     int remain = N - (A - restA) - (B - restB);//reamining free vertices
 
     for (int v : adj[i]) {
-        if (nodes[i].agent_type == 1) {              
+        if (nodes[i].agent_type == 1) {
+
             if (nodes[v].agent_type == 0 && sum_agents > 0) 
-                { score += 1; sum_agents--; }  
+                score += 1, sum_agents--; 
+            
+                else if ( nodes[i].agent_type == 2 ||  nodes[i].agent_type == 1) 
+                score += 1;
         }
         else if (nodes[i].agent_type == 2) { 
             if (nodes[v].agent_type == 0 && remain > restA + restB) 
-                {score += 1; remain --;}
+                score += 1, remain --;
+            else if (nodes[v].agent_type == 3)
+                score++;
         }
     }
     return score;
@@ -186,11 +192,11 @@ int read_matrix( vector<Node> &nodes){
     int u, v;
     for (int i = 0; i < M; ++i) {
         cin >> u >> v;
-        nodes[u].degree++;
-        nodes[v].degree++;
+        nodes[u-1].degree++;
+        nodes[v-1].degree++;
         
-        adj[u].push_back(v);
-        adj[v].push_back(u);
+        adj[u-1].push_back(v-1);
+        adj[v-1].push_back(u-1);
         // cout << u << v << '\n';
         }
     return 0;
@@ -233,7 +239,7 @@ void print_nodes(const vector<Node> &nodes) {
     cout << "Node list:\n";
     cout << "ID\tDegree\tAgentType\tOccupied\n";
     cout << "----------------------------------------\n";
-    for (size_t i = 1; i < nodes.size(); ++i) {
+    for (size_t i = 0; i < nodes.size() -1 ; ++i) {
         cout << nodes[i].id << "\t"
              << nodes[i].degree << "\t"
              << nodes[i].agent_type << "\t\t"
@@ -248,7 +254,7 @@ void print_adj_list() {
     cout << "----------------------\n";
 
     // Start from 1 because your graph is 1-indexed
-    for (size_t i = 1; i < adj.size(); ++i) {
+    for (size_t i = 0; i < adj.size() - 1; ++i) {
         cout << i << " -> ";
         for (size_t j = 0; j < adj[i].size(); ++j) {
             cout << adj[i][j];
