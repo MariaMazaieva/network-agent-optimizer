@@ -9,144 +9,116 @@
 */
 
 using namespace std;
+enum AgentType {
+    EMPTY = 0,       // Type: empty
+    EXTRAVERT = 1,  // Type: A
+    INTROVERT = 2, // Type: B
+    CHECKED = 3   // Type: specifically left empty, skipped
+};
 struct Node{
     int id;
     int degree;
     bool occupied;
-    int agent_type;
-    Node(int id = 0, int d = 0, bool occ = false, int type = 0) : 
+    AgentType agent_type;
+    Node(int id = 0, int d = 0, bool occ = false, AgentType type = EMPTY) : 
         id(id), degree(d), occupied(occ), agent_type(type) {}
 
 };
 
-int counter = 0;
-int global_best_score =0;
+int global_best_score = 0;
 int N, M, A, B;
+vector<vector<int>> adj;
 
 bool read_input_args();
 bool in_range();
 int read_matrix( vector<Node> &nodes);
-int find_best_solution(int i,  vector<Node> &nodes, int A, int B);
-int graph_search ( vector<Node> &nodes);
-int calculate_score( vector<Node> &nodes);
-
-int count_max_node_score(int i, vector<Node> &nodes, int restA, int restB);
 void print_nodes(const vector<Node> &nodes);
 void print_adj_list();
 
+void find_best_solution(int i,  vector<Node> &nodes, int A, int B);
 int remaining_max (int i_cur_node, vector<Node> &nodes, int restA, int restB);
+int count_max_node_score(int i, vector<Node> &nodes, int restA, int restB);
+int calculate_score( vector<Node> &nodes);
 
+bool is_occupied (int i, vector<Node> &nodes);
 
-
-vector<vector<int>> adj;
 
 int main() {
     if (!read_input_args()) return 1;
     adj.resize(N);
     vector<Node> nodes(N);
     read_matrix(nodes);
-  
-    //do i really need this 
-    for (int i = 0; i < N; ++i){
-        nodes[i].id = i;
-        nodes[i].occupied = false;
-        nodes[i].agent_type = 0;
-    }
+
     // sort (nodes.begin(), nodes.end(), [](const Node &a, const Node &b)
     //     {return a.degree > b.degree;});
-    
-    int best_score = graph_search(nodes);
-    
 
+    find_best_solution(0, nodes, A, B);
 
     cout << global_best_score << endl;
     return 0;
 }
 
-int graph_search (vector<Node> &nodes){
-    int best_score=0;
-    
-    best_score = find_best_solution(0, nodes, A, B);
-    
-    return best_score;
-}
-
-int find_best_solution(int i, vector<Node> &nodes, int A, int B){
-    // int V = nodes.size()-1; //amount of vertices 
-
-   if(i >= N || (A == 0 && B == 0)){
+void find_best_solution(int i, vector<Node> &nodes, int A, int B){
+   
+    if(i >= N || (A == 0 && B == 0)){
         int score = calculate_score(nodes);
-        // print_nodes(nodes);
         global_best_score = max(global_best_score, score);
-        return 0;
+        return ;
     } 
     
-    
-   
     int rest = remaining_max(i, nodes, A, B);
     if (rest <= global_best_score)
-        return 0;
+        return ;
 
     if(A > 0 ){
-        nodes[i].agent_type = 1; 
+        nodes[i].agent_type = EXTRAVERT; 
         nodes[i].occupied=true; 
         
         find_best_solution(i + 1, nodes, A - 1, B); 
-        nodes[i].agent_type = 0;
+        nodes[i].agent_type = EMPTY;
         nodes[i].occupied=false; 
     }
 
     if(B > 0){
-        nodes[i].agent_type = 2; 
+        nodes[i].agent_type = INTROVERT; 
         nodes[i].occupied=true; 
 
         find_best_solution(i + 1, nodes, A, B-1);  
-        nodes[i].agent_type = 0;
+        nodes[i].agent_type = EMPTY;
         nodes[i].occupied=false; 
     }
 
     if( N - i  > A + B ){
-        nodes[i].agent_type = 3; // 3 - CHECKED
+        nodes[i].agent_type = CHECKED; 
         find_best_solution(i + 1, nodes, A, B);
-        nodes[i].agent_type = 0;
-        // nodes[i].occupied=false; 
+        nodes[i].agent_type = EMPTY;
     }
-
-    return 0;
 }
 
 
 int remaining_max (int i_cur_node, vector<Node>& nodes, int restA, int restB){
     int r_max = 0;
-   
     int temp_score = 0;
   
-    
     for( int i = 0; i < i_cur_node; i ++){
-        if(nodes[i].agent_type == 1 || nodes[i].agent_type == 2){
+        if(nodes[i].agent_type == EXTRAVERT || nodes[i].agent_type == INTROVERT){
             temp_score = count_max_node_score(i, nodes, restA, restB);
             r_max += temp_score;
         }
     }
 
-    // for( int v = 0; v < N; v ++){
-    //     if(nodes[v].agent_type == 0 && sum_agents > 0){
-    //         r_max += adj[v].size();
-    //         sum_agents--;
-    //     }
-    // }    
     int potential_extravert = 0, potential_introvert = 0;
     int sum_agents = restA + restB;
     for ( int v = i_cur_node; v < N; v ++){
-        if (nodes[v].agent_type == 0 && ((sum_agents) > 0)){
+        if (nodes[v].agent_type == EMPTY && ((sum_agents) > 0)){
             
             if(restA > 0){
-                nodes[v].agent_type = 1;
+                nodes[v].agent_type = EXTRAVERT;
                 potential_extravert = count_max_node_score(v, nodes, restA-1, restB);
                 // restA--;
             }
             if(restB > 0){
-                nodes[v].agent_type = 2;
+                nodes[v].agent_type = INTROVERT;
                 potential_introvert = count_max_node_score(v, nodes, restA, restB-1);
                 // restB--
             }
@@ -159,28 +131,24 @@ int remaining_max (int i_cur_node, vector<Node>& nodes, int restA, int restB){
                 restB--;
             }
             sum_agents = restA + restB;
-            nodes[v].agent_type = 0;
+            nodes[v].agent_type = EMPTY;
         }
     }
-
-
     return r_max;
 }
 
-
+//!(is_occupied(v, nodes) = nodes[u].agent_type == CHECKED || nodes[u].agent_type == EMPTY)
 int calculate_score( vector<Node> &nodes){
     int score=0;
     for(int u=0; u < N; u++){
-        if(nodes[u].agent_type == 3 || nodes[u].agent_type == 0) continue;
+        if(!is_occupied(u, nodes)) continue;
 
         for(int v : adj[u]){
             // Each agent scores based on their own perspective
-            if (nodes[u].agent_type == 1 && 
-                    (nodes[v].agent_type == 1  || nodes[v].agent_type == 2)) 
+            if (nodes[u].agent_type == EXTRAVERT && is_occupied(v, nodes)) 
                 score++;
             
-                else if (nodes[u].agent_type == 2 && 
-                (nodes[v].agent_type == 0  || nodes[v].agent_type == 3))
+            else if (nodes[u].agent_type == INTROVERT && (!is_occupied(v, nodes)))
                 score++;
         }
     }
@@ -192,27 +160,33 @@ int count_max_node_score(int i, vector<Node> &nodes, int restA, int restB){
     int sum_agents = restA + restB;
     int remain = N - (A - restA) - (B - restB);//reamining free vertices
 
-    for (int v : adj[i]) {
-        if (nodes[i].agent_type == 1) {
+    for (int adj_u : adj[i]) {
+        if (nodes[i].agent_type == EXTRAVERT) {
 
-            if (nodes[v].agent_type == 0 && sum_agents > 0) 
+            if (nodes[adj_u].agent_type == EMPTY && sum_agents > 0) 
                 {score += 1; sum_agents--; }
             
-            else if ( nodes[v].agent_type == 2 ||  nodes[v].agent_type == 1) 
+            else if (is_occupied(adj_u, nodes)) 
                 score += 1;
         }
-        else if (nodes[i].agent_type == 2) { 
-            
-            // if (nodes[v].agent_type == 0 && remain > restA + restB) 
-            if (nodes[v].agent_type == 0 && remain > sum_agents) 
+        else if (nodes[i].agent_type == INTROVERT) { 
+
+            if (nodes[adj_u].agent_type == EMPTY && remain > sum_agents) 
 
                 {score += 1; remain --;}
             
-            else if (nodes[v].agent_type == 3)
+            else if (nodes[adj_u].agent_type == CHECKED)
                 score++;
         }
     }
     return score;
+}
+
+bool is_occupied (int i, vector<Node> &nodes){
+    if( nodes[i].agent_type == EXTRAVERT || 
+        nodes[i].agent_type == INTROVERT)
+        return true ;
+    return false; 
 }
 
 int read_matrix( vector<Node> &nodes){
