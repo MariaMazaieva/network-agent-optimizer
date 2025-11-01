@@ -67,7 +67,7 @@ void find_best_solution(int i, vector<Node> &nodes, int A, int B){
     } 
     
     int rest = remaining_max(i, nodes, A, B);
-    if (rest <= global_best_score)
+    if (rest < global_best_score)
         return ;
 
     if(A > 0 ){
